@@ -1,0 +1,30 @@
+{
+  "doc": {
+    "main_class": "OpusApp",
+    "bosa_class": "bosa_sdm_msword",
+    "program": "word",
+    "main_module": "document"
+  },
+
+  "xls": {
+    "main_class": "XLMAIN",
+    "bosa_class": "bosa_sdm_XL9",
+    "program": "excel",
+    "main_module": "workbook"
+  },
+
+  "docm": {
+    "main_class": "OpusApp",
+    "bosa_class": "bosa_sdm_msword",
+    "program": "word",
+    "main_module": "document"
+  },
+
+  "xlsm": {
+    "main_class": "XLMAIN",
+    "bosa_class": "bosa_sdm_XL9",
+    "program": "excel",
+    "main_module": "workbook"
+  }
+
+}
