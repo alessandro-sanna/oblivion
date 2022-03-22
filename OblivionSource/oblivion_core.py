@@ -19,6 +19,7 @@ class OblivionCore:
 
         self.current_original_file = None
         self.current_modified_file = None
+        self.current_extension = None
         self.current_output_file = None
         self.current_report_file = None
 
@@ -31,7 +32,8 @@ class OblivionCore:
             self.config = json.load(cj, object_hook=lambda d: SimpleNamespace(**d))
 
         with open(os.path.join("OblivionResources", "config", "extensions.json"), "r") as cj:
-            self.extensions = json.load(cj)
+            self.ext_info = json.load(cj)
+            self.extensions = list(self.ext_info.keys())
 
         self.original_macro_path = os.path.join("OblivionResources", "files", "original_macro.txt")
 
@@ -43,8 +45,7 @@ class OblivionCore:
 
     def __execute_on_folder(self):
         tf = self.args.target_folder
-        extensions = self.extensions.keys()
-        file_list = [os.path.join(tf, x) for x in os.listdir(tf) if x.split('.')[-1] in extensions]
+        file_list = [os.path.join(tf, x) for x in os.listdir(tf) if x.split('.')[-1] in self.extensions]
 
         for fp in file_list:
             self.args.target_file = fp
@@ -102,7 +103,9 @@ class OblivionCore:
         pass
 
     def __file_extraction(self):
-        pass
+        log_path = os.path.join("OblivionResources", "logs", "sbx_out_err.log")
+        log_path_sbx = self.__path_to_sandbox(log_path)
+        phase = FileExecution()
 
     def __post_processing(self):
         pass

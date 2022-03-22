@@ -3,6 +3,7 @@ import sys
 import os
 import shutil
 from itertools import product
+import subprocess
 
 
 class FileExecutionException(Exception):
@@ -10,8 +11,9 @@ class FileExecutionException(Exception):
 
 
 class FileExecution:
-    def __init__(self, running_file, output_file, output_file_in_sandbox, instrumented_code_path,
-                 sandbox_name, sandbox_exe, no_office_mode_flag, no_clean_slate_flag):
+    def __init__(self, running_file, output_file, output_file_in_sandbox, 
+                 log_file, log_file_in_sandbox, instrumented_code_path,
+                 sandbox_name, sandbox_exe, ext_info, no_office_mode_flag, no_clean_slate_flag):
         self.auto_open, self.auto_close = self.__get_auto_exec(instrumented_code)
         if not self.auto_open and not self.auto_close:
             raise FileExecutionException("Code cannot run itself.")
@@ -19,8 +21,12 @@ class FileExecution:
         self.running_file = running_file
         self.output_file = output_file
         self.output_file_in_sandbox = output_file_in_sandbox
+        self.log_file = log_file
+        self.log_file_in_sandbox = log_file_in_sandbox
+        
         self.instrumented_code_path = instrumented_code_path
 
+        self.ext_info = ext_info
         self.sandbox_name = sandbox_name
         self.sandbox_exe = sandbox_exe
 
@@ -30,12 +36,16 @@ class FileExecution:
     def run(self):
         command = self.__build_command()
         self.__launch(commmand)
-        self.__retrieve_output()
+        try:
+            shutil.copy2(self.output_file_in_sandbox, self.output_file)
+        except FileNotFoundError:
+            raise FileExecutionException("File execution produced no output.")
 
     def __build_command(self):
         if not self.no_office_mode_flag:
             script_name = "office_sandbox.pyw"
-            script_args = [self.running_file, self.instrumented_code, 
+            script_args = [self.running_file, self.instrumented_code_path, 
+                           self.ext_info["program"], self.ext_info["main_class"], self.ext_info["main_module"]
                            self.auto_open, self.auto_close, self.no_clean_slate_flag]
         else:
             script_name = "wscript_sandbox.pyw"
@@ -43,18 +53,25 @@ class FileExecution:
 
         command = [self.sandbox_exe, f"/box:{self.sandbox_name}",
                    sys.executable.replace("python.exe", "pythonw.exe"), 
-                   script_name] + script_args
+                   script_name] + script_args + [self.log_file]
         
         return command
     
     def __launch(self, command):
-        pass
-    
-    def __retrieve_output(self):
-        if os.path.exists(self.output_file_in_sandbox):
-            shutil.copy2(self.output_file_in_sandbox, self.output_file)
-        else:
-            raise FileExecutionException("File execution produced no output")
+        process = subprocess.check_output(command)
+
+        if process.exitcode != 0:
+            reason = "File execution crashed"
+            try:
+                shutil.copy2(self.log_file_in_sandbox, self.log_file)
+            except FileNotFoundError:
+                reason += " with no log."
+            else:
+                with open(self.log_file, "r") as lf:
+                    output = [x for x in lf.readlines() if x][-1]
+                reason += f": {output}." + f"Detailed log at {os.path.relpath(self.log_file)}"
+            finally:
+                raise FileExecutionException(reason)
     
     @staticmethod
     def __get_auto_exec(instrumented_code_path) -> (bool, bool):

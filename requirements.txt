@@ -1,1 +1,2 @@
 oletools
+pywin32
