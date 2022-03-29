@@ -1,6 +1,5 @@
 from oletools.olevba import VBA_Parser
-from os.path import join
-import sys
+import pickle
 import os
 
 
@@ -38,7 +37,16 @@ class MacroExtractor:
             vb_parser.close()
             raise MacroExtractionException(u"No VBA macro found.")
 
-    def __parse_macro(self, vba_filename, vba_code):
+    @staticmethod
+    def __parse_macro(vba_filename, vba_code):
+        code = "\n".join([line for line in vba_code.splitlines()
+                          if "Attribute VB_" not in line]).strip() + "\n"
+        macro_data = [vba_filename, code]
+
+        with open(os.path.join("OblivionResources", "data", "original_macro_data.pkl", "wb")) as pkl:
+            pickle.dump(macro_data, pkl)
+
+        """    
         try:
             self.__macro_list.append("VBA MACRO " + vba_filename + "~~\n")
             self.__macro_list.append('-*' * 30 + '\n\n')
@@ -48,3 +56,4 @@ class MacroExtractor:
             self.__macro_list.append('-' * 60 + '\n\n')
         except TypeError:
             raise MacroExtractionException("Macro could not be parsed.")
+        """

@@ -1,2 +1,5 @@
 oletools
 pywin32
+pywinauto
+pyautogui
+psutil
