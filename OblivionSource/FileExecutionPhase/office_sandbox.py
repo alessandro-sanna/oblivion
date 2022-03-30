@@ -12,15 +12,16 @@ class OfficeSandboxException(Exception):
 class OfficeSandbox:
     def __init__(self, running_file, instrumented_code_path, log_file,
                  program, main_class, main_module,
-                 auto_open, auto_close, no_clean_slate_flag):
+                 auto_open, auto_close, no_clean_slate_flag, log_flag=True):
         self.running_file = running_file
         self.extension = running_file.split('.')[-1]
         self.instrumented_code_path = instrumented_code_path
 
-        self.log_file = log_file
-        log_fp = open(self.log_file, "w")
-        sys.stdout = log_fp
-        sys.stderr = log_fp
+        if log_flag:
+            self.log_file = log_file
+            log_fp = open(self.log_file, "w")
+            sys.stdout = log_fp
+            sys.stderr = log_fp
 
         self.program = program
         self.main_class = main_class
@@ -31,12 +32,17 @@ class OfficeSandbox:
 
         self.macro_extension_code_dict = {'bas': 1, 'cls': 2, 'frm': 3}
         self.macro_extension_code_dict_rev = {v: k for k, v in self.macro_extension_code_dict.items()}
+        # To-be-set-variables
         self.macro_dict = None
-
-    def run(self):
+        self.app_name = None
+        self.vhook_module_path = None
+        self.clean_file_path = None
+        self.output_file_path = None
         # Preliminary phase
         self.__build_strings()
         self.__get_instrumented_macros()
+
+    def run(self):
         # Macro insertion
         app = self.__open_program()
         file_to_modify = self.__open_file(self.program, app, self.running_file)
@@ -69,7 +75,11 @@ class OfficeSandbox:
             macro_dict = pickle.load(icf)
 
         with open(self.vhook_module_path, "r") as vhf:
-            macro_dict.update({"vhook.bas": vhf.read()})
+            instrumentation_module = vhf.read()
+            to_replace = "<insert path here from oblivion>"
+            path_file = os.path.abspath(self.running_file)
+            instrumentation_module = instrumentation_module.replace(to_replace, path_file)
+            macro_dict.update({"vhook.bas": instrumentation_module})
 
         self.macro_dict = macro_dict
 
@@ -128,6 +138,7 @@ class OfficeSandbox:
             key = f"{name}.{ext}"
             new_code = self.macro_dict[key]
             macro.CodeModule.AddFromString(new_code)
+        return office_file
 
     @staticmethod
     def __close_file(office_file):

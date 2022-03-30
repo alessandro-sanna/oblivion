@@ -3,10 +3,10 @@ import json
 from types import SimpleNamespace
 import multiprocessing
 # Oblivion phases
-from MacroExtractionPhase import MacroExtraction, MacroExtractionException
-from MacroInstrumentationPhase import MacroInstrumentation, MacroInstrumentationException
-from FileExecutionPhase import FileExecution, FileExecutionException
-from PostProcessingPhase import PostProcessing, PostProcessingException
+from OblivionSource.MacroExtractionPhase import MacroExtraction, MacroExtractionException
+from OblivionSource.MacroInstrumentationPhase import MacroInstrumentation, MacroInstrumentationException
+from OblivionSource.FileExecutionPhase import FileExecution, FileExecutionException
+from OblivionSource.PostProcessingPhase import PostProcessing, PostProcessingException
 
 
 class OblivionCoreException(Exception):

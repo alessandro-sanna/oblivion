@@ -1,2 +1,2 @@
-from oblivion_core import OblivionCore
-from PreProcessingPhase.pre_processing import PreProcessing
+from .oblivion_core import OblivionCore
+from .PreProcessingPhase.pre_processing import PreProcessing

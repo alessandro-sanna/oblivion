@@ -1,1 +1,1 @@
-from macro_instrumentation import MacroInstrumentation, MacroInstrumentationException
+from .macro_instrumentation import MacroInstrumentation, MacroInstrumentationException

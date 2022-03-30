@@ -1,1 +1,1 @@
-from macro_extraction import MacroExtraction, MacroExtractionException
+from .macro_extraction import MacroExtraction, MacroExtractionException

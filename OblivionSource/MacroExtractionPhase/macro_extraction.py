@@ -7,7 +7,7 @@ class MacroExtractionException(Exception):
     pass
 
 
-class MacroExtractor:
+class MacroExtraction:
     def __init__(self, file_path, extensions):
         if file_path.split('.')[-1] in extensions:
             self.__office_file_path = file_path
