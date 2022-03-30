@@ -84,7 +84,10 @@ class OfficeSandbox:
         self.macro_dict = macro_dict
 
     def __open_program(self, visible=False, security_level=3):
-        app = win32com.client.gencache.EnsureDispatch(self.app_name)
+        try:
+            app = win32com.client.gencache.EnsureDispatch(self.app_name)
+        except TypeError:
+            app = win32com.client.DispatchEx(self.app_name)
         app.Application.AutomationSecurity = security_level
         app.Visible = visible
         app.DisplayAlerts = False

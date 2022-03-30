@@ -1,0 +1,7 @@
+Sub AutoOpen:
+test_st = "This was run at opening."
+End Sub
+
+Sub AutoClose:
+test_st = "This was run at closing."
+End Sub
