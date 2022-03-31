@@ -6,26 +6,30 @@ from OblivionSource.FileExecutionPhase import OfficeSandbox
 
 
 class OfficeSandboxTesting(unittest.TestCase):
-
     def setUp(self) -> None:
         self.app = None
         self.program = "word"
         self.office_file = None
-        running_file = os.path.abspath(os.path.join("OblivionTest", "test_files", "documento_prova.docm"))
+        self.running_file = os.path.abspath(os.path.join("OblivionTest", "test_files", "documento_prova.docm"))
         instrumented_code_path = os.path.abspath(os.path.join("OblivionTest", "test_files", "macro_dict_prova.pkl"))
         log_file = os.path.abspath(os.path.join("OblivionTest", "test_files", "log_file_prova.txt"))
         program, main_class, main_module = "word", "OpusApp", "document"
-        auto_open, auto_close, no_clean_slate_flag = True, False, False
-        self.TestClass = OfficeSandbox(running_file, instrumented_code_path, log_file,
+        auto_open, auto_close, no_clean_slate_flag = True, False, True
+        self.TestClass = OfficeSandbox(self.running_file, instrumented_code_path, log_file,
                                        program, main_class, main_module,
                                        auto_open, auto_close, no_clean_slate_flag,
                                        log_flag=False)
+
+
+class SingleMethods(OfficeSandboxTesting):
+    def setUp(self) -> None:
+        super().setUp()
         self.app = self.TestClass._OfficeSandbox__open_program()
         self.app.Visible = 0
-        self.office_file = self.TestClass._OfficeSandbox__open_file(self.program, self.app, running_file)
+        self.office_file = self.TestClass._OfficeSandbox__open_file(self.program, self.app, self.running_file)
 
     def tearDown(self) -> None:
-        self.office_file.Close()
+        self.office_file.Close(0)
         self.app.Quit()
 
     def test_open_program(self):
@@ -34,7 +38,7 @@ class OfficeSandboxTesting(unittest.TestCase):
                      if y.status() == "running" and "word" in y.name().lower()]
         self.assertGreater(len(processes), 0)
 
-    def test_zopen_file(self):
+    def test_open_file(self):
         # In questo test __open_file non viene chiamato, perchè lo è nel setUp dei metodi
         file_basename = os.path.basename(self.TestClass.running_file)
         try:
@@ -84,6 +88,11 @@ class OfficeSandboxTesting(unittest.TestCase):
             target_code = macro_dict[key]
             this_code = macro.CodeModule.Lines(1, macro.CodeModule.CountOfLines)
             self.assertEqual(this_code, target_code)
+
+
+class GlobalRun(OfficeSandboxTesting):
+    def test_run(self):
+        self.TestClass.run()
 
 
 if __name__ == '__main__':

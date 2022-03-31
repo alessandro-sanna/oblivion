@@ -13,11 +13,11 @@ class MacroExtraction:
             self.__office_file_path = file_path
         else:
             raise MacroExtractionException("The given file is not a recognized office file")
-        self.__macro_list = list()
-        self.__extract_macro()
+        self.__macro_data = None
 
     def run(self):
-        return "".join(self.__macro_list)
+        self.__extract_macro()
+        return self.__macro_data
 
     def __extract_macro(self):
         vb_parser = VBA_Parser(self.__office_file_path)
@@ -30,7 +30,7 @@ class MacroExtraction:
         if vb_parser.detect_vba_macros():
             for (filename, stream_path, vba_filename, vba_code) in \
                     vb_parser.extract_macros():
-                self.__parse_macro(vba_filename, vba_code)
+                self.__macro_data = self.__parse_macro(vba_filename, vba_code)
             vb_parser.close()
             return
         else:
@@ -46,14 +46,17 @@ class MacroExtraction:
         with open(os.path.join("OblivionResources", "data", "original_macro_data.pkl", "wb")) as pkl:
             pickle.dump(macro_data, pkl)
 
-        """    
-        try:
-            self.__macro_list.append("VBA MACRO " + vba_filename + "~~\n")
-            self.__macro_list.append('-*' * 30 + '\n\n')
-            code = "\n".join([line for line in vba_code.splitlines()
-                             if "Attribute VB_" not in line]).strip() + "\n"
-            self.__macro_list.append(code)
-            self.__macro_list.append('-' * 60 + '\n\n')
-        except TypeError:
-            raise MacroExtractionException("Macro could not be parsed.")
-        """
+        return macro_data
+
+
+"""    
+try:
+    self.__macro_list.append("VBA MACRO " + vba_filename + "~~\n")
+    self.__macro_list.append('-*' * 30 + '\n\n')
+    code = "\n".join([line for line in vba_code.splitlines()
+                     if "Attribute VB_" not in line]).strip() + "\n"
+    self.__macro_list.append(code)
+    self.__macro_list.append('-' * 60 + '\n\n')
+except TypeError:
+    raise MacroExtractionException("Macro could not be parsed.")
+"""

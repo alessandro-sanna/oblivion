@@ -1,7 +1,8 @@
 import argparse
 import sys
 import os
-from OblivionSource import OblivionCore, PreProcessing
+from OblivionSource import OblivionCore
+from OblivionSource.PreProcessingPhase import PreProcessing
 
 
 class OblivionException(Exception):
@@ -34,8 +35,6 @@ class Oblivion:
                             help="if set, inject instrumentation in file as it is")
         parser.add_argument("-im", "--use_interaction_manager", action="store_true",
                             help="if set, run the interaction manager plug-in")
-        parser.add_argument("-noi", "--no_office_instance", action="store_true",
-                            help="if set, try to execute only VBS code without Office")
 
         if len(sys.argv) == 1:
             print("No argument supplied\n")

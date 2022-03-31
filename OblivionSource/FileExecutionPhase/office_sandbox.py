@@ -45,14 +45,15 @@ class OfficeSandbox:
     def run(self):
         # Macro insertion
         app = self.__open_program()
-        file_to_modify = self.__open_file(self.program, app, self.running_file)
+        file_to_modify = self.__open_file(self.program, app, self.running_file, add_reference=True)
         self.__replace_macros(file_to_modify)
         file_to_modify.SaveAs(self.output_file_path)
         self.__close_file(file_to_modify)
         self.__close_program(app)
         # Proper execution
-        app = self.__open_program(visible=True, security_level=1)
-        file_to_run = self.__open_file(self.program, app, self.output_file_path)
+        app = self.__open_program(security_level=1)
+        app.Visible = True
+        file_to_run = self.__open_file(self.program, app, self.output_file_path, add_reference=False)
         # should i wait for auto_open == True?
         self.__close_file(file_to_run)
         # should i wait for auto_close == True?
@@ -83,24 +84,29 @@ class OfficeSandbox:
 
         self.macro_dict = macro_dict
 
-    def __open_program(self, visible=False, security_level=3):
-        try:
-            app = win32com.client.gencache.EnsureDispatch(self.app_name)
-        except TypeError:
-            app = win32com.client.DispatchEx(self.app_name)
+    def __open_program(self, security_level=3):
+        app = win32com.client.DispatchEx(self.app_name)
         app.Application.AutomationSecurity = security_level
-        app.Visible = visible
+        app.Visible = False
         app.DisplayAlerts = False
         return app
 
     @staticmethod
-    def __open_file(program, app, file_name):
+    def __open_file(program, app, file_name, add_reference=True):
         if program == "word":
             return_file = app.Documents.Open(file_name)
         elif program == "excel":
             return_file = app.Workbooks.Open(file_name)
         else:
             raise OfficeSandboxException(f"Program {program} is not supported.")
+
+        if add_reference:
+            try:
+                return_file.VBProject.References.AddFromGUID("{420B2830-E718-11CF-893D-00A0C9054228}", 1, 0)
+            except pywintypes.com_error as exc:
+                exc_code = exc.excepinfo[-2]
+                if exc_code != 1032813:
+                    raise OfficeSandboxException(f"scrrun.dll reference could not be added to file, error {exc_code}")
         return return_file
 
     def __replace_macros(self, office_file):
@@ -145,7 +151,7 @@ class OfficeSandbox:
 
     @staticmethod
     def __close_file(office_file):
-        office_file.Close()
+        office_file.Close(0)
 
     @staticmethod
     def __close_program(app):
