@@ -75,7 +75,7 @@ class FileExecution:
             prefixes = ["auto", "document", "workbook"]
             joints = ["", "_"]
             suffixes = ["open", "close"]
-            flags = (False for _ in suffixes)
+            flags = list(False for _ in suffixes)
             
             keywords = [''.join(x) for x in product(prefixes, joints, suffixes)]
             

@@ -92,7 +92,7 @@ class OblivionCore:
             pass  # handle
 
     def __macro_extraction(self):
-        phase = MacroExtraction(self.current_original_file, self.extensions.keys())
+        phase = MacroExtraction(self.current_original_file, self.extensions)
         macro_code = phase.run()
         print("[+] Macro successfully extracted")
 
