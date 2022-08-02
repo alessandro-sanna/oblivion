@@ -1,5 +1,5 @@
 from oletools.olevba import VBA_Parser
-import pickle
+import json
 import os
 
 
@@ -8,12 +8,13 @@ class MacroExtractionException(Exception):
 
 
 class MacroExtraction:
-    def __init__(self, file_path, extensions):
+    def __init__(self, file_path, extensions, original_macro_data_path):
         if file_path.split('.')[-1] in extensions:
             self.__office_file_path = file_path
         else:
             raise MacroExtractionException("The given file is not a recognized office file")
-        self.__macro_data = None
+        self.__macro_data = dict()
+        self.__original_macro_data_path = original_macro_data_path
 
     def run(self):
         self.__extract_macro()
@@ -30,8 +31,11 @@ class MacroExtraction:
         if vb_parser.detect_vba_macros():
             for (filename, stream_path, vba_filename, vba_code) in \
                     vb_parser.extract_macros():
-                self.__macro_data = self.__parse_macro(vba_filename, vba_code)
+                self.__macro_data.update(self.__parse_macro(vba_filename, vba_code))
             vb_parser.close()
+
+            with open(self.__original_macro_data_path, "w") as fpJson:
+                json.dump(self.__macro_data, fpJson, indent=4)
             return
         else:
             vb_parser.close()
@@ -41,12 +45,9 @@ class MacroExtraction:
     def __parse_macro(vba_filename, vba_code):
         code = "\n".join([line for line in vba_code.splitlines()
                           if "Attribute VB_" not in line]).strip() + "\n"
-        macro_data = [vba_filename, code]
-
-        with open(os.path.join("OblivionResources", "data", "original_macro_data.pkl", "wb")) as pkl:
-            pickle.dump(macro_data, pkl)
-
+        macro_data = {vba_filename: code}
         return macro_data
+
 
 
 """    

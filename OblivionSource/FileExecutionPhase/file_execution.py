@@ -41,10 +41,11 @@ class FileExecution:
             raise FileExecutionException("File execution produced no output.")
 
     def __build_command(self):
-        script_name = "office_sandbox.py"
+        script_name = os.path.join("OblivionSource", "FileExecutionPhase", "office_sandbox.py")
+        flags = [str(int(f)) for f in (self.auto_open, self.auto_close, self.no_clean_slate_flag)]
         script_args = [self.running_file, self.instrumented_code_path,
                        self.ext_info["program"], self.ext_info["main_class"], self.ext_info["main_module"],
-                       self.auto_open, self.auto_close, self.no_clean_slate_flag]
+                       ] + flags
 
         command = [self.sandbox_exe, f"/box:{self.sandbox_name}",
                    sys.executable.replace("python.exe", "pythonw.exe"), 
@@ -53,20 +54,22 @@ class FileExecution:
         return command
     
     def __launch(self, command):
-        process = subprocess.check_output(command)
-
-        if process.exitcode != 0:
+        try:
+            process = subprocess.check_output(command)
+        except Exception as exc:
             reason = "File execution crashed"
             try:
                 shutil.copy2(self.log_file_in_sandbox, self.log_file)
             except FileNotFoundError:
-                reason += " with no log."
+                reason += " with no log"
             else:
                 with open(self.log_file, "r") as lf:
                     output = [x for x in lf.readlines() if x][-1]
                 reason += f": {output}." + f"Detailed log at {os.path.relpath(self.log_file)}"
             finally:
-                raise FileExecutionException(reason)
+                raise FileExecutionException(f"{reason}. Caught Exception {exc}")
+        else:
+            return process.exitcode
     
     @staticmethod
     def __get_auto_exec(instrumented_code_path) -> (bool, bool):

@@ -36,6 +36,12 @@ class OblivionCore:
             self.extensions = list(self.ext_info.keys())
 
         self.original_macro_path = os.path.join("OblivionResources", "files", "original_macro.txt")
+        self.original_macro_data_path = os.path.join("OblivionResources", "data", "original_macro_data.json")
+
+        self.instrumented_macro_data = os.path.join("OblivionResources", "files", "instrumented_macro.txt")
+        self.instrumented_macro_data_path = os.path.join("OblivionResources", "data", "instrumented_macro_data.json")
+
+        self.exclusion_path = None
 
     def execute(self, single=False):
         if single:
@@ -53,9 +59,10 @@ class OblivionCore:
 
     def __execute_on_file(self):
         pool = multiprocessing.Pool(processes=1)
-        async_obj = pool.apply_async(self.__run)
+        async_obj = pool.apply_async(self.run)
 
         self.current_original_file = self.args.target_file
+        self.current_extension = self.args.target_file.split(".")[-1]
         self.current_sandbox_original = self.__path_to_sandbox(self.args.target_file)
 
         self.current_modified_file, \
@@ -67,48 +74,51 @@ class OblivionCore:
 
         try:
             async_obj.get(timeout=self.args.time_limit)
-        except OblivionCoreException:
-            pass  # handle
         except multiprocessing.TimeoutError:
-            pass  # handle
+            raise OblivionCoreException("[-] Timeout!")  # handle
 
-    def __run(self):
+    def run(self):
         try:
             self.__macro_extraction()
             self.__macro_instrumentation()
             self.__file_extraction()
             self.__post_processing()
         except MacroExtractionException as exc:
-            pass  # handle
+            raise OblivionCoreException(f"[-] Macro extraction failed: {exc}")  # handle
         except MacroInstrumentationException as exc:
-            pass  # handle
+            raise OblivionCoreException(f"[-] Macro instrumentation failed: {exc}")  # handle
         except FileExecutionException as exc:
-            pass  # handle
+            raise OblivionCoreException(f"[-] File execution failed: {exc}")  # handle
         except PostProcessingException as exc:
-            pass  # handle
+            raise OblivionCoreException(f"[-] Report generation failed: {exc}")  # handle
         else:
             pass  # handle
         finally:
             pass  # handle
 
     def __macro_extraction(self):
-        phase = MacroExtraction(self.current_original_file, self.extensions)
-        macro_code = phase.run()
+        phase = MacroExtraction(self.current_original_file, self.extensions, self.original_macro_data_path)
+        phase.run()
         print("[+] Macro successfully extracted")
 
-        with open(self.original_macro_path, "w") as omf:
-            omf.write(macro_code)
-
     def __macro_instrumentation(self):
-        pass
+        phase = MacroInstrumentation(self.original_macro_data_path, self.exclusion_path, \
+                                     self.instrumented_macro_data_path)
+        phase.run()
+        print("[+] Macro successfully instrumented")
 
     def __file_extraction(self):
         log_path = os.path.join("OblivionResources", "logs", "sbx_out_err.log")
         log_path_sbx = self.__path_to_sandbox(log_path)
-        phase = FileExecution()
+
+        phase = FileExecution(self.current_original_file, self.current_output_file, self.current_sandbox_output,
+                              log_path, log_path_sbx, self.instrumented_macro_data_path, self.config.Sandbox_name,
+                              self.config.Sandboxie_path, self.ext_info[self.current_extension],
+                              self.args.no_clean_slate)
+        phase.run()
 
     def __post_processing(self):
-        pass
+        phase = PostProcessing()
 
     @staticmethod
     def __path_to_output(path):
@@ -118,8 +128,9 @@ class OblivionCore:
         report_path = path.replace(ext, f"_{ext}_report.txt")
         return modified_path, output_path, report_path
 
-    @staticmethod
-    def __path_to_sandbox(path):
-        # implement, should be a replace
-        return path
-
+    def __path_to_sandbox(self, path):
+        old_root = os.path.join("C:\\", "Users", os.getenv("username"))
+        new_root = os.path.join("C:\\", "Sandbox", os.getenv("username"), self.config.Sandbox_name, "user", "current")
+        print(old_root, new_root)
+        sandbox_path = path.replace(old_root, new_root)
+        return sandbox_path

@@ -48,7 +48,7 @@ class Oblivion:
             raise OblivionException("Error! -f must be a file path.")
         if self.args.target_directory is not None and not os.path.isdir(self.args.target_directory):
             raise OblivionException("Error! -d must be a folder path.")
-        if self.args.output_directory is not None and not os.path.isfile(self.args.output_directory):
+        if self.args.output_directory is not None and not os.path.isdir(self.args.output_directory):
             raise OblivionException("Error! -o must be a folder path.")
 
     def is_file_run(self):
@@ -74,4 +74,4 @@ if __name__ == '__main__':
         prep_obj.execute()
 
     else:
-        raise ValueError("Options not recognized, please use -h for usage.")
+        raise OblivionException("Options not recognized, please use -h for usage.")

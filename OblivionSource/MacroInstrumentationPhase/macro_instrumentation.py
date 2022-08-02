@@ -45,7 +45,7 @@ class MacroInstrumentation:
     disable = False
     is_init_added = False
 
-    def __init__(self, original_macro_path, exclusions_path):
+    def __init__(self, original_macro_path, exclusions_path, instrumented_macro_data_path):
         with open(original_macro_path, "r") as omf:
             self.__original_macros = json.load(omf)
         self.__instrumented_macros = {k: None for k in self.__original_macros.keys()}
@@ -54,12 +54,13 @@ class MacroInstrumentation:
 
         self.lines_to_exclude = None
         self.lines_to_exclude_params = None
+        self.instrumented_macro_data_path = instrumented_macro_data_path
 
     def run(self):
         for macro_name in self.__instrumented_macros.keys():
             self.__instrumented_macros[macro_name] = \
                 self.__instrument(self.__original_macros[macro_name])
-        with open(os.path.join("OblivionResources", "data", "instrumented_macro_data.json", "w")) as jsf:
+        with open(self.instrumented_macro_data_path, "w") as jsf:
             json.dump(self.__instrumented_macros, jsf, indent=4)
 
     def __instrument(self, macro):
@@ -68,7 +69,7 @@ class MacroInstrumentation:
         self.lines = macro_lines
         self.__sanitize()
         self.__dispatch()
-        return "\n".join(self.lines)
+        return "\n".join(self.output)
 
     """
         Fix inline code
@@ -275,9 +276,12 @@ class MacroInstrumentation:
         return auto_open or auto_close
 
     @staticmethod
-    def __get_auto_exec(instrumented_code_path) -> (bool, bool):
-        with open(instrumented_code_path, "r") as icf:
-            code = icf.read().lower()
+    def __get_auto_exec(code_ref) -> (bool, bool):
+        if os.path.isfile(code_ref):
+            with open(code_ref, "r") as icf:
+                code = icf.read().lower()
+        else:  # if here, "code_ref" is the function name: no need to process
+            code = code_ref
             prefixes = ["auto", "document", "workbook"]
             joints = ["", "_"]
             suffixes = ["open", "close"]

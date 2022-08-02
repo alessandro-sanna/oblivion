@@ -1,4 +1,5 @@
 import os.path
+import os
 import unittest
 import pywintypes
 import psutil
@@ -7,6 +8,7 @@ from OblivionSource.FileExecutionPhase import OfficeSandbox
 
 class OfficeSandboxTesting(unittest.TestCase):
     def setUp(self) -> None:
+        os.chdir("..")
         self.app = None
         self.program = "word"
         self.office_file = None

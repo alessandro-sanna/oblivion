@@ -1,7 +1,7 @@
 import sys
 import win32com.client
 import os
-import pickle
+import json
 import pywintypes
 
 
@@ -42,6 +42,10 @@ class OfficeSandbox:
         self.__build_strings()
         self.__get_instrumented_macros()
 
+    def __del__(self):
+        sys.stdout.close()
+        sys.stderr.close()
+
     def run(self):
         # Macro insertion
         app = self.__open_program()
@@ -72,8 +76,8 @@ class OfficeSandbox:
         self.output_file_path = os.path.join(base_folder, base_name)
 
     def __get_instrumented_macros(self):
-        with open(self.instrumented_code_path, "rb") as icf:
-            macro_dict = pickle.load(icf)
+        with open(self.instrumented_code_path, "r") as icf:
+            macro_dict = json.load(icf)
 
         with open(self.vhook_module_path, "r") as vhf:
             instrumentation_module = vhf.read()

@@ -3,3 +3,5 @@ pywin32
 pywinauto
 pyautogui
 psutil
+easyprocess
+numpy
