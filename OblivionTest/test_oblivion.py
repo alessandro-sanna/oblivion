@@ -24,9 +24,11 @@ class MyTestCase(unittest.TestCase):
         self.assertLessEqual(toc - tic, timeout + 1)
 
     def test_run(self):
-        command = f"-f OblivionTest/test_files/auto_both_test.docm -o OblivionTest/test_out"
+        file_to_test = r"C:\Users\diee\PycharmProjects\OblivionRef\OblivionTest\test_files\auto_both_test.docm"
+        command = f"-f {file_to_test} -o OblivionTest/test_out"
         self.run_command(self.script, command)
-        self.assertTrue(os.path.exists(r"OblivionTest/test_out/auto_both_test_output.docm.txt"))
+        self.assertTrue(os.path.exists(r"OblivionTest/test_files/auto_both_test.docm.txt"))
+        self.assertTrue(os.path.exists(r"OblivionTest/test_files/auto_both_test_docm_report.txt"))
 
 
 if __name__ == '__main__':

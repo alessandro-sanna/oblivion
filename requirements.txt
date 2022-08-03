@@ -5,3 +5,4 @@ pyautogui
 psutil
 easyprocess
 numpy
+wmi

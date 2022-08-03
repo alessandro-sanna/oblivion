@@ -24,7 +24,7 @@ class PostProcessingException(Exception):
 
 class PostProcessing(object):
     def __init__(self, file_path, output_path, original_macro_path, file_ext,
-                 powerdecode_path, sandboxie_path, sandboxie_name, program):
+                 powerdecode_path, sandboxie_path, sandboxie_name, program, report_file):
         self.variables = OrderedDict()  # variables
         self.nodes = OrderedDict()  # method calls
         self.exe_set = set()  # executables set
@@ -48,6 +48,8 @@ class PostProcessing(object):
         self.macro_text = self.__get_macro(original_macro_path)
         self.output_name = basename(output_path)
         self.complete_path = output_path
+        self.report_file = report_file
+        self.out = None
         self.__deobf_list = list()
         self.__sandboxie_path = sandboxie_path
         self.__sandboxie_name = sandboxie_name
@@ -72,6 +74,9 @@ class PostProcessing(object):
         self.__get_sys_file_write()
         self.__get_deobfuscation()
         self.__get_interactions()
+
+    def run(self):
+        self.save_report(self.report_file)
 
     def save_report(self, output_path):
         self.out = open(output_path, "w")  # destination

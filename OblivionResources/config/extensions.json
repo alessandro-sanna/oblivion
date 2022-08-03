@@ -3,28 +3,32 @@
     "main_class": "OpusApp",
     "bosa_class": "bosa_sdm_msword",
     "program": "word",
-    "main_module": "document"
+    "main_module": "document",
+    "process_name": "WINWORD.EXE"
   },
 
   "xls": {
     "main_class": "XLMAIN",
     "bosa_class": "bosa_sdm_XL9",
     "program": "excel",
-    "main_module": "workbook"
+    "main_module": "workbook",
+    "process_name": "EXCEL.EXE"
   },
 
   "docm": {
     "main_class": "OpusApp",
     "bosa_class": "bosa_sdm_msword",
     "program": "word",
-    "main_module": "document"
+    "main_module": "document",
+    "process_name": "WINWORD.EXE"
   },
 
   "xlsm": {
     "main_class": "XLMAIN",
     "bosa_class": "bosa_sdm_XL9",
     "program": "excel",
-    "main_module": "workbook"
+    "main_module": "workbook",
+    "process_name": "EXCEL.EXE"
   }
 
 }

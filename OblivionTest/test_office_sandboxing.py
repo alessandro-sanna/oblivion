@@ -13,7 +13,7 @@ class OfficeSandboxTesting(unittest.TestCase):
         self.program = "word"
         self.office_file = None
         self.running_file = os.path.abspath(os.path.join("OblivionTest", "test_files", "documento_prova.docm"))
-        instrumented_code_path = os.path.abspath(os.path.join("OblivionTest", "test_files", "macro_dict_prova.pkl"))
+        instrumented_code_path = os.path.abspath(os.path.join("OblivionTest", "test_files", "macro_dict_prova.json"))
         log_file = os.path.abspath(os.path.join("OblivionTest", "test_files", "log_file_prova.txt"))
         program, main_class, main_module = "word", "OpusApp", "document"
         auto_open, auto_close, no_clean_slate_flag = True, False, True

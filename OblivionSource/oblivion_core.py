@@ -2,6 +2,7 @@ import os
 import json
 from types import SimpleNamespace
 import multiprocessing
+from easyprocess import EasyProcess
 # Oblivion phases
 from OblivionSource.MacroExtractionPhase import MacroExtraction, MacroExtractionException
 from OblivionSource.MacroInstrumentationPhase import MacroInstrumentation, MacroInstrumentationException
@@ -79,6 +80,9 @@ class OblivionCore:
 
     def run(self):
         try:
+            # Preliminary
+            self.__clean_sandbox()
+            # Phases
             self.__macro_extraction()
             self.__macro_instrumentation()
             self.__file_extraction()
@@ -89,20 +93,27 @@ class OblivionCore:
             raise OblivionCoreException(f"[-] Macro instrumentation failed: {exc}")  # handle
         except FileExecutionException as exc:
             raise OblivionCoreException(f"[-] File execution failed: {exc}")  # handle
+            # repeat process must go here
         except PostProcessingException as exc:
             raise OblivionCoreException(f"[-] Report generation failed: {exc}")  # handle
         else:
             pass  # handle
         finally:
-            pass  # handle
+            self.__clean_sandbox()  # handle
+            pass
 
     def __macro_extraction(self):
         phase = MacroExtraction(self.current_original_file, self.extensions, self.original_macro_data_path)
-        phase.run()
+        macro_data = phase.run()
+
+        with open(self.original_macro_path, "w") as foObj:
+            for macro_name, macro_code in macro_data.items():
+                foObj.write(f"{macro_name}\n{macro_code}\n\n")
+
         print("[+] Macro successfully extracted")
 
     def __macro_instrumentation(self):
-        phase = MacroInstrumentation(self.original_macro_data_path, self.exclusion_path, \
+        phase = MacroInstrumentation(self.original_macro_data_path, self.exclusion_path,
                                      self.instrumented_macro_data_path)
         phase.run()
         print("[+] Macro successfully instrumented")
@@ -118,14 +129,19 @@ class OblivionCore:
         phase.run()
 
     def __post_processing(self):
-        phase = PostProcessing()
+        program = self.ext_info[self.current_extension]["program"]
+        phase = PostProcessing(self.current_original_file, self.current_output_file, self.original_macro_path,
+                               self.current_extension, self.config.PowerDecode_path, self.config.Sandboxie_path,
+                               self.config.Sandbox_name, program, self.current_report_file)
+        phase.run()
 
     @staticmethod
     def __path_to_output(path):
         ext = path.split('.')[-1]
-        modified_path = path.replace(ext, f"_obl3_modified.{ext}")
-        output_path = path.replace(ext, f"_{ext}_output.txt")
-        report_path = path.replace(ext, f"_{ext}_report.txt")
+        modified_path = path.replace('.' + ext, f"_obl3_modified.{ext}")
+        # output_path = path.replace('.' + ext, f"_{ext}_output.txt")
+        output_path = path + ".txt"
+        report_path = path.replace('.' + ext, f"_{ext}_report.txt")
         return modified_path, output_path, report_path
 
     def __path_to_sandbox(self, path):
@@ -134,3 +150,7 @@ class OblivionCore:
         print(old_root, new_root)
         sandbox_path = path.replace(old_root, new_root)
         return sandbox_path
+
+    def __clean_sandbox(self):
+        EasyProcess([self.config.Sandboxie_path, "/terminate_all"]).call().wait()
+        EasyProcess([self.config.Sandboxie_path, "delete_sandbox_silent"]).call().wait()

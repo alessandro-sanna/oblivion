@@ -1,5 +1,5 @@
 {
-  "Sandboxie_path": "C:\\Sandboxie\\Start.exe",
+  "Sandboxie_path": "C:\\Program Files\\Sandboxie\\Start.exe",
   "Sandbox_name": "DefaultBox",
   "PowerDecode_path": "C:\\Users\\Alessandro\\PycharmProjects\\oblivion\\PowerDecode\\PowerDecode.psm1",
   "MongoDB_path": "C:\\Program Files\\MongoDB\\Server\\5.0\\bin"

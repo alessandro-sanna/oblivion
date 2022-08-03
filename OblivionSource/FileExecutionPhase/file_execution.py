@@ -1,9 +1,11 @@
-import multiprocessing
 import sys
 import os
 import shutil
+import time
 from itertools import product
 import subprocess
+import wmi
+from copy import deepcopy
 
 
 class FileExecutionException(Exception):
@@ -33,10 +35,14 @@ class FileExecution:
         self.no_clean_slate_flag = no_clean_slate_flag
 
     def run(self):
+        file_name = deepcopy(self.output_file_in_sandbox)
         command = self.__build_command()
         self.__launch(command)
         try:
-            shutil.copy2(self.output_file_in_sandbox, self.output_file)
+            while not self.__is_file_available(file_name):
+                time.sleep(0.5)
+
+            shutil.copy2(file_name, self.output_file)
         except FileNotFoundError:
             raise FileExecutionException("File execution produced no output.")
 
@@ -47,30 +53,34 @@ class FileExecution:
                        self.ext_info["program"], self.ext_info["main_class"], self.ext_info["main_module"],
                        ] + flags
 
-        command = [self.sandbox_exe, f"/box:{self.sandbox_name}",
-                   sys.executable.replace("python.exe", "pythonw.exe"), 
+        command = [self.sandbox_exe, f"/box:{self.sandbox_name}", "/wait",
+                   sys.executable.replace("python.exe", "pythonw.exe"),
                    script_name] + script_args + [self.log_file]
         
         return command
     
     def __launch(self, command):
         try:
-            process = subprocess.check_output(command)
-        except Exception as exc:
-            reason = "File execution crashed"
-            try:
-                shutil.copy2(self.log_file_in_sandbox, self.log_file)
-            except FileNotFoundError:
-                reason += " with no log"
-            else:
-                with open(self.log_file, "r") as lf:
-                    output = [x for x in lf.readlines() if x][-1]
-                reason += f": {output}." + f"Detailed log at {os.path.relpath(self.log_file)}"
-            finally:
-                raise FileExecutionException(f"{reason}. Caught Exception {exc}")
+            subprocess.check_call(command)
+        except subprocess.CalledProcessError as exc:
+            self.__print_crash(exc, exc.returncode)
+
+    def __print_crash(self, exc=None, return_code=0):
+        reason = f"File execution crashed, exit code = {return_code},"
+        try:
+            shutil.copy2(self.log_file_in_sandbox, self.log_file)
+        except FileNotFoundError:
+            reason += " with no log"
         else:
-            return process.exitcode
-    
+            with open(self.log_file, "r") as lf:
+                output = [x for x in lf.readlines() if x][-1]
+            reason += f": {output}." + f"Detailed log at {os.path.relpath(self.log_file)}"
+        finally:
+            message = f"{reason}."
+            if exc is not None:
+                message += f" Caught exception {exc}"
+            raise FileExecutionException(message)
+
     @staticmethod
     def __get_auto_exec(instrumented_code_path) -> (bool, bool):
         with open(instrumented_code_path, "r") as icf:
@@ -91,3 +101,25 @@ class FileExecution:
                         break
         
         return flags
+
+    @staticmethod
+    def __is_file_available(file_path) -> bool:
+        casted = str(file_path)
+        try:
+            if os.path.exists(casted):
+                os.rename(casted, casted)
+            else:
+                return False
+        except OSError:
+            return False
+        else:
+            return True
+
+    def __is_office_closed(self):
+        try:
+            next((proc for proc in wmi.WMI().Win32_Process()
+                  if proc.name.upper() == self.ext_info["process_name"]))
+        except StopIteration:
+            return True
+        else:
+            return False

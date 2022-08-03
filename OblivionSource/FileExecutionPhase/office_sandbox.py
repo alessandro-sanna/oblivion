@@ -3,6 +3,7 @@ import win32com.client
 import os
 import json
 import pywintypes
+import pathlib
 
 
 class OfficeSandboxException(Exception):
@@ -20,7 +21,7 @@ class OfficeSandbox:
         if log_flag:
             self.log_file = log_file
             log_fp = open(self.log_file, "w")
-            sys.stdout = log_fp
+            # sys.stdout = log_fp
             sys.stderr = log_fp
 
         self.program = program
@@ -43,12 +44,12 @@ class OfficeSandbox:
         self.__get_instrumented_macros()
 
     def __del__(self):
-        sys.stdout.close()
         sys.stderr.close()
 
     def run(self):
         # Macro insertion
         app = self.__open_program()
+
         file_to_modify = self.__open_file(self.program, app, self.running_file, add_reference=True)
         self.__replace_macros(file_to_modify)
         file_to_modify.SaveAs(self.output_file_path)
@@ -58,9 +59,9 @@ class OfficeSandbox:
         app = self.__open_program(security_level=1)
         app.Visible = True
         file_to_run = self.__open_file(self.program, app, self.output_file_path, add_reference=False)
-        # should i wait for auto_open == True?
+        # should I wait for auto_open == True?
         self.__close_file(file_to_run)
-        # should i wait for auto_close == True?
+        # should I wait for auto_close == True?
         self.__close_program(app)
 
     def __build_strings(self):
@@ -109,15 +110,14 @@ class OfficeSandbox:
                 return_file.VBProject.References.AddFromGUID("{420B2830-E718-11CF-893D-00A0C9054228}", 1, 0)
             except pywintypes.com_error as exc:
                 exc_code = exc.excepinfo[-2]
-                if exc_code != 1032813:
+                if exc_code != 1032813:  # la reference c'e' gia'
                     raise OfficeSandboxException(f"scrrun.dll reference could not be added to file, error {exc_code}")
         return return_file
 
     def __replace_macros(self, office_file):
-        if self.no_clean_slate_flag:
-            office_file = self.__empty_macros(office_file)
-        else:
+        if not self.no_clean_slate_flag:
             office_file = self.__make_macros(office_file)
+        office_file = self.__empty_macros(office_file)
         self.__write_macros(office_file)
 
     @staticmethod
@@ -146,7 +146,7 @@ class OfficeSandbox:
             name = macro.Name
             try:
                 ext = self.macro_extension_code_dict_rev[macro.Type]
-            except KeyError:
+            except KeyError:  # se non e' 1,2,3 allora e' 100, cioe' ThisDocument che e' un cls
                 ext = "cls"
             key = f"{name}.{ext}"
             new_code = self.macro_dict[key]
@@ -171,4 +171,6 @@ if __name__ == '__main__':
     office_sbx_obj = OfficeSandbox(running_file, instrumented_code_path, log_file,
                                    program, main_class, main_module,
                                    auto_open, auto_close, no_clean_slate_flag)
+
     office_sbx_obj.run()
+
