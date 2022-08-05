@@ -624,6 +624,15 @@ class PostProcessing(object):
             os.rename(sbx_file_name, file_name)
 
     def __get_interactions(self):
+        log_path = os.path.join("OblivionResources", "logs", "InteractionPlugin", "interactions.txt")
+        try:
+            with open(log_path, "r") as foObj:
+                self.interaction_lines = foObj.readlines()
+        except FileNotFoundError:
+            self.interaction_lines = ["Nothing Found"]
+
+    """
+    def __get_interactions(self):
         interaction_manager_report = os.path.join(os.getcwd(), "data", "interaction_result.log")
         if os.path.exists(interaction_manager_report):
             with open(interaction_manager_report, "rb") as fb:
@@ -639,6 +648,7 @@ class PostProcessing(object):
         else:
             self.interaction_lines = ["Nothing Found\n"]
             return
+    """
 
     def __get_interaction_API(self):
         with open(self.complete_path, "r") as f:

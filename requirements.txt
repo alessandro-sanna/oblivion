@@ -1,8 +1,10 @@
-oletools
+oletools~=0.60.1
 pywin32
-pywinauto
-pyautogui
-psutil
-easyprocess
-numpy
-wmi
+pywinauto~=0.6.8
+pyautogui~=0.9.53
+psutil~=5.9.1
+easyprocess~=1.1
+numpy~=1.23.1
+wmi~=1.5.1
+Pillow
+

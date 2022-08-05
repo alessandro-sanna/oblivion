@@ -1,13 +1,17 @@
 import os
 import json
+import time
+from numpy import around
 from types import SimpleNamespace
 import multiprocessing
+import threading
 from easyprocess import EasyProcess
 # Oblivion phases
 from OblivionSource.MacroExtractionPhase import MacroExtraction, MacroExtractionException
 from OblivionSource.MacroInstrumentationPhase import MacroInstrumentation, MacroInstrumentationException
 from OblivionSource.FileExecutionPhase import FileExecution, FileExecutionException
 from OblivionSource.PostProcessingPhase import PostProcessing, PostProcessingException
+from OblivionPlugins.InteractionManager import InteractionManager
 
 
 class OblivionCoreException(Exception):
@@ -43,6 +47,7 @@ class OblivionCore:
         self.instrumented_macro_data_path = os.path.join("OblivionResources", "data", "instrumented_macro_data.json")
 
         self.exclusion_path = None
+        self.interaction_manager_enabled = True
 
     def execute(self, single=False):
         if single:
@@ -79,13 +84,19 @@ class OblivionCore:
             raise OblivionCoreException("[-] Timeout!")  # handle
 
     def run(self):
+        print(f"[?] Current sample: {os.path.basename(self.current_original_file)}")
+        starting_time = time.time()
         try:
             # Preliminary
             self.__clean_sandbox()
             # Phases
             self.__macro_extraction()
             self.__macro_instrumentation()
+            # Dynamic Analysis
+            int_thread, enable_event = self.__interaction_manager()
             self.__file_extraction()
+            enable_event.clear()
+            int_thread.join()
             self.__post_processing()
         except MacroExtractionException as exc:
             raise OblivionCoreException(f"[-] Macro extraction failed: {exc}")  # handle
@@ -93,14 +104,25 @@ class OblivionCore:
             raise OblivionCoreException(f"[-] Macro instrumentation failed: {exc}")  # handle
         except FileExecutionException as exc:
             raise OblivionCoreException(f"[-] File execution failed: {exc}")  # handle
-            # repeat process must go here
+            # repeating process must go here
         except PostProcessingException as exc:
             raise OblivionCoreException(f"[-] Report generation failed: {exc}")  # handle
         else:
             pass  # handle
         finally:
+            ending_time = time.time()
             self.__clean_sandbox()  # handle
+            print(f"[?] Analysis time: {around(ending_time - starting_time, decimals=2)}")
             pass
+
+    def __interaction_manager(self):
+        enable_event = threading.Event()
+        enable_event.set()
+        phase = InteractionManager(self.current_original_file, self.ext_info[self.current_extension], enable_event)
+        int_thread = threading.Thread(target=phase.run, daemon=True)
+        int_thread.start()
+
+        return int_thread, enable_event
 
     def __macro_extraction(self):
         phase = MacroExtraction(self.current_original_file, self.extensions, self.original_macro_data_path)
@@ -127,6 +149,7 @@ class OblivionCore:
                               self.config.Sandboxie_path, self.ext_info[self.current_extension],
                               self.args.no_clean_slate)
         phase.run()
+        print("[+] File successfully executed")
 
     def __post_processing(self):
         program = self.ext_info[self.current_extension]["program"]
@@ -134,6 +157,7 @@ class OblivionCore:
                                self.current_extension, self.config.PowerDecode_path, self.config.Sandboxie_path,
                                self.config.Sandbox_name, program, self.current_report_file)
         phase.run()
+        print("[+] Report successfully generated")
 
     @staticmethod
     def __path_to_output(path):
@@ -147,7 +171,6 @@ class OblivionCore:
     def __path_to_sandbox(self, path):
         old_root = os.path.join("C:\\", "Users", os.getenv("username"))
         new_root = os.path.join("C:\\", "Sandbox", os.getenv("username"), self.config.Sandbox_name, "user", "current")
-        print(old_root, new_root)
         sandbox_path = path.replace(old_root, new_root)
         return sandbox_path
 

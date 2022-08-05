@@ -23,6 +23,7 @@ class FileExecution:
         self.running_file = running_file
         self.output_file = output_file
         self.output_file_in_sandbox = output_file_in_sandbox
+
         self.log_file = log_file
         self.log_file_in_sandbox = log_file_in_sandbox
         
@@ -36,11 +37,12 @@ class FileExecution:
 
     def run(self):
         file_name = deepcopy(self.output_file_in_sandbox)
+
         command = self.__build_command()
         self.__launch(command)
         try:
             while not self.__is_file_available(file_name):
-                time.sleep(0.5)
+                time.sleep(1)
 
             shutil.copy2(file_name, self.output_file)
         except FileNotFoundError:
@@ -105,6 +107,7 @@ class FileExecution:
     @staticmethod
     def __is_file_available(file_path) -> bool:
         casted = str(file_path)
+
         try:
             if os.path.exists(casted):
                 os.rename(casted, casted)
@@ -114,12 +117,3 @@ class FileExecution:
             return False
         else:
             return True
-
-    def __is_office_closed(self):
-        try:
-            next((proc for proc in wmi.WMI().Win32_Process()
-                  if proc.name.upper() == self.ext_info["process_name"]))
-        except StopIteration:
-            return True
-        else:
-            return False
