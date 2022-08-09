@@ -1,3 +1,4 @@
+import oletools.olevba
 from oletools.olevba import VBA_Parser
 import json
 import os
@@ -21,8 +22,12 @@ class MacroExtraction:
         return self.__macro_data
 
     def __extract_macro(self):
-        vb_parser = VBA_Parser(self.__office_file_path)
+        try:
+            vb_parser = VBA_Parser(self.__office_file_path)
+        except oletools.olevba.FileOpenError:
+            raise MacroExtractionException(f"File looks like a Office document but isn't")
 
+        there_is_code = False
         try:
             vb_parser.extract_all_macros()
         except IndexError:
@@ -31,12 +36,19 @@ class MacroExtraction:
         if vb_parser.detect_vba_macros():
             for (filename, stream_path, vba_filename, vba_code) in \
                     vb_parser.extract_macros():
-                self.__macro_data.update(self.__parse_macro(vba_filename, vba_code))
+                new_macro = self.__parse_macro(vba_filename, vba_code)
+                if new_macro[vba_filename].strip():
+                    there_is_code = True
+
+                self.__macro_data.update(new_macro)
             vb_parser.close()
+
+            if not there_is_code:
+                raise MacroExtractionException(u"All macros are empty")
 
             with open(self.__original_macro_data_path, "w") as fpJson:
                 json.dump(self.__macro_data, fpJson, indent=4)
-            return
+
         else:
             vb_parser.close()
             raise MacroExtractionException(u"No VBA macro found.")

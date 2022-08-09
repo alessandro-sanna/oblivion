@@ -4,7 +4,6 @@ import shutil
 import time
 from itertools import product
 import subprocess
-import wmi
 from copy import deepcopy
 
 
@@ -40,13 +39,15 @@ class FileExecution:
 
         command = self.__build_command()
         self.__launch(command)
-        try:
+
+        if not os.path.exists(file_name):
+            raise FileExecutionException("File execution produced no output.")
+        else:
             while not self.__is_file_available(file_name):
                 time.sleep(1)
 
             shutil.copy2(file_name, self.output_file)
-        except FileNotFoundError:
-            raise FileExecutionException("File execution produced no output.")
+
 
     def __build_command(self):
         script_name = os.path.join("OblivionSource", "FileExecutionPhase", "office_sandbox.py")

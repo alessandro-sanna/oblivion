@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import multiprocessing
 import threading
 from easyprocess import EasyProcess
+import queue
 # Oblivion phases
 from OblivionSource.MacroExtractionPhase import MacroExtraction, MacroExtractionException
 from OblivionSource.MacroInstrumentationPhase import MacroInstrumentation, MacroInstrumentationException
@@ -59,7 +60,7 @@ class OblivionCore:
             self.__execute_on_folder()
 
     def __execute_on_folder(self):
-        tf = self.args.target_folder
+        tf = self.args.target_directory
         file_list = [os.path.join(tf, x) for x in os.listdir(tf) if x.split('.')[-1] in self.extensions]
 
         for fp in file_list:
@@ -81,12 +82,15 @@ class OblivionCore:
             self.current_sandbox_output, self.current_sandbox_report = \
             (self.__path_to_sandbox(x) for x in self.__path_to_output(self.args.target_file))
 
+        print("---")
         try:
             async_obj.get(timeout=self.args.time_limit)
         except multiprocessing.TimeoutError:
-            raise OblivionCoreException("[-] Timeout!")  # handle
+            print("[-] Timeout!")  # handle
         except OblivionCoreException as exc:
             print(exc)
+        finally:
+            del pool  # I have no clue why this is explicitly needed but ok
 
     def run(self):
         print(f"[?] Current sample: {os.path.basename(self.current_original_file)}")
@@ -99,10 +103,7 @@ class OblivionCore:
             self.__macro_extraction()
             self.__macro_instrumentation()
             # Dynamic Analysis
-            int_thread, enable_event = self.__interaction_manager()
-            self.__file_extraction()
-            enable_event.clear()
-            # int_thread.join()
+            self.__dynamic_analysis()
             self.__post_processing()
         except MacroExtractionException as exc:
             raise OblivionCoreException(f"[-] Macro extraction failed: {exc}")  # handle
@@ -123,11 +124,13 @@ class OblivionCore:
     def __interaction_manager(self):
         enable_event = threading.Event()
         enable_event.set()
-        phase = InteractionManager(self.current_original_file, self.ext_info[self.current_extension], enable_event)
+        exception_queue = queue.Queue()
+        phase = InteractionManager(self.current_original_file, self.ext_info[self.current_extension],
+                                   enable_event, exception_queue)
         int_thread = threading.Thread(target=phase.run, daemon=True)
         int_thread.start()
 
-        return int_thread, enable_event
+        return int_thread, enable_event, exception_queue
 
     def __macro_extraction(self):
         phase = MacroExtraction(self.current_original_file, self.extensions, self.original_macro_data_path)
@@ -145,6 +148,24 @@ class OblivionCore:
         phase.run()
         print(f"[+] Macro successfully instrumented in {self.__toc()}")
 
+    def __dynamic_analysis(self):
+        int_thread, enable_event, exception_queue = self.__interaction_manager()
+
+        try:
+            self.__file_extraction()
+        except FileExecutionException as main_exc:
+            try:
+                child_exc = exception_queue.get(block=False)
+            except queue.Empty:
+                raise FileExecutionException(main_exc)
+            else:
+                raise FileExecutionException(child_exc)
+        else:
+            print(f"[+] File successfully executed in {self.__toc()}")
+        finally:
+            enable_event.clear()
+            int_thread.join()
+
     def __file_extraction(self):
         log_path = os.path.join("OblivionResources", "logs", "sbx_out_err.log")
         log_path_sbx = self.__path_to_sandbox(log_path)
@@ -154,7 +175,6 @@ class OblivionCore:
                               self.config.Sandboxie_path, self.ext_info[self.current_extension],
                               self.args.no_clean_slate)
         phase.run()
-        print(f"[+] File successfully executed in {self.__toc()}")
 
     def __post_processing(self):
         program = self.ext_info[self.current_extension]["program"]

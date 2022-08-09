@@ -1,15 +1,19 @@
-import sys
 import time
 import os
 import pyautogui
 import psutil
 import pywinauto
+import pywintypes
 from copy import deepcopy
 import win32gui
 
 
+class InteractionManagerException(Exception):
+    pass
+
+
 class InteractionManager:
-    def __init__(self, target_file, program_info, enable_event):
+    def __init__(self, target_file, program_info, enable_event, exception_queue):
         self.target_file = target_file
         self.program_info = program_info  # the ext_info dict
         self.current_process = None
@@ -19,15 +23,16 @@ class InteractionManager:
         self.log_file = os.path.join(self.log_folder, "interactions.txt")
         if os.path.exists(self.log_file):
             os.remove(self.log_file)
-        self.log_fp = open(self.log_file, "w")
 
         self.enable_event = enable_event
+        self.exception_queue = exception_queue
+
         self.names_to_ignore = ["sandboxie", "outlook"]
         self.names_to_signal = ["visual basic"]
 
     def run(self):
         self.__set_office()
-        window_list = self.__get_new_windows([])
+        window_list = []
 
         while self.enable_event.is_set():
             try:
@@ -38,11 +43,11 @@ class InteractionManager:
             except IndexError:
                 time.sleep(0.5)
 
-        self.log_fp.close()
+        # self.log_fp.close()
 
     def __set_office(self):
         queue = psutil.process_iter()
-        while True:
+        while self.enable_event.is_set():
             try:
                 proc = next(queue)
             except StopIteration:
@@ -62,8 +67,12 @@ class InteractionManager:
         return windows_list
 
     def __manage_window(self, window):
-        win32gui.SetForegroundWindow(window.handle)
-        time.sleep(0.1)
+        try:
+            win32gui.SetForegroundWindow(window.handle)
+        except pywintypes.error:
+            self.__handle_error(f"Interaction window {window.handle} is unmanageable")
+
+        time.sleep(0.2)
         self.__log(window)
 
         if not self.__preliminary_close(window):
@@ -86,12 +95,12 @@ class InteractionManager:
     def __button_strategy(self, elem):
         rect = self.current_app.window(handle=elem.handle).wrapper_object().client_rect()
         self.current_app.window(handle=elem.handle).wrapper_object().click_input(coords=(rect.right - 1, rect.bottom - 1))
-        self.log_fp.write(f"[x] Clicked on Button {elem.name}\n")
+        self.__write_on_log(f"[x] Clicked on Button {elem.name}")
 
     def __textbox_strategy(self, elem):
         textbox = self.current_app.window(handle=elem.handle).wrapper_object()
         textbox.set_edit_text("OBLIVION")  # gibberish, to replace
-        self.log_fp.write("[x] Textbox edited\n")
+        self.__write_on_log("[x] Textbox edited")
 
     def __preliminary_close(self, window):
         name = window.name.lower()
@@ -99,17 +108,20 @@ class InteractionManager:
             self.__close_window(window)
             return True
         if any([n for n in self.names_to_signal if n in name]):
-            reasons = deepcopy(window.children())
+            reasons = deepcopy(window.children()[-1])
+            reasons = reasons.name.replace('\n', ' ')
+            handle = window.handle
+            message = f"VBA Error: detected error window {handle}, details: {reasons}"
             self.__close_window(window)
-            self.__handle_error(reasons)
-            # should I close Office here?
+            self.__handle_error(message)
             return True
 
         return False
 
-    @staticmethod
-    def __handle_error(elems):
-        raise Exception(f"{elems}")
+    def __handle_error(self, message):
+        self.__set_office()
+        self.current_process.terminate()
+        self.exception_queue.put(InteractionManagerException(message))
 
     def __close_window(self, window):
         if self.__is_enabled(window):
@@ -121,8 +133,12 @@ class InteractionManager:
         file_name = os.path.basename(self.target_file)
         scr_path = os.path.join(self.log_folder, f"{file_name}+{w_name}+{window.handle}.png")
         screen.save(scr_path)
-        self.log_fp.write(f"[x] Found window {w_name} with handle: {window.handle} and elements: {window.children()}\n")
-        self.log_fp.flush()
+        self.__write_on_log(f"[x] Found window {w_name} with handle: {window.handle} and elements: {window.children()}")
+
+    def __write_on_log(self, log_message):
+        with open(self.log_file, "a") as fpLog:
+            fpLog.write(log_message + "\n")
+            fpLog.flush()
 
     @staticmethod
     def __is_enabled(window):
