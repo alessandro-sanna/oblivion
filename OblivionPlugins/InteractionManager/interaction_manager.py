@@ -23,7 +23,7 @@ class InteractionManager:
 
         self.enable_event = enable_event
         self.names_to_ignore = ["sandboxie", "outlook"]
-        self.names_to_alert = ["visual basic"]
+        self.names_to_signal = ["visual basic"]
 
     def run(self):
         self.__set_office()
@@ -46,7 +46,7 @@ class InteractionManager:
             try:
                 proc = next(queue)
             except StopIteration:
-                time.sleep(0.5)
+                queue = psutil.process_iter()
             else:
                 if self.program_info["process_name"] in proc.name().upper():
                     self.current_process = proc
@@ -69,9 +69,9 @@ class InteractionManager:
         if not self.__preliminary_close(window):
             elements = deepcopy(window.children())
             for element in elements:
-                self.__interact(element)
                 if not self.__is_enabled(window):
                     break
+                self.__interact(element)
 
     def __interact(self, elem):
         if elem.class_name == "Edit":
@@ -98,12 +98,18 @@ class InteractionManager:
         if any([n for n in self.names_to_ignore if n in name]):
             self.__close_window(window)
             return True
-        if any([n for n in self.names_to_ignore if n in name]):
+        if any([n for n in self.names_to_signal if n in name]):
+            reasons = deepcopy(window.children())
             self.__close_window(window)
+            self.__handle_error(reasons)
             # should I close Office here?
             return True
 
         return False
+
+    @staticmethod
+    def __handle_error(elems):
+        raise Exception(f"{elems}")
 
     def __close_window(self, window):
         if self.__is_enabled(window):
@@ -124,6 +130,7 @@ class InteractionManager:
 
 
 if __name__ == '__main__':
+    import threading
     target_file = r"C:\Users\diee\PycharmProjects\OblivionRef\OblivionTest\test_files\auto_both_test.docm"
     ext_info = {
     "main_class": "OpusApp",
@@ -132,5 +139,9 @@ if __name__ == '__main__':
     "main_module": "document",
     "process_name": "WINWORD.EXE"
     }
-    phase = InteractionManager(target_file, ext_info, True)
+    s = threading.Event()
+    s.set()
+    phase = InteractionManager(target_file, ext_info, s)
     phase.run()
+
+    pass

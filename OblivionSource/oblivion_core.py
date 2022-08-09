@@ -1,6 +1,8 @@
 import os
 import json
 import time
+
+import numpy as np
 from numpy import around
 from types import SimpleNamespace
 import multiprocessing
@@ -47,7 +49,8 @@ class OblivionCore:
         self.instrumented_macro_data_path = os.path.join("OblivionResources", "data", "instrumented_macro_data.json")
 
         self.exclusion_path = None
-        self.interaction_manager_enabled = True
+        self.starting_time = -1
+        self.last_phase_ended_at = -1
 
     def execute(self, single=False):
         if single:
@@ -82,10 +85,13 @@ class OblivionCore:
             async_obj.get(timeout=self.args.time_limit)
         except multiprocessing.TimeoutError:
             raise OblivionCoreException("[-] Timeout!")  # handle
+        except OblivionCoreException as exc:
+            print(exc)
 
     def run(self):
         print(f"[?] Current sample: {os.path.basename(self.current_original_file)}")
-        starting_time = time.time()
+        self.starting_time = time.time()
+        self.last_phase_ended_at = self.starting_time
         try:
             # Preliminary
             self.__clean_sandbox()
@@ -96,7 +102,7 @@ class OblivionCore:
             int_thread, enable_event = self.__interaction_manager()
             self.__file_extraction()
             enable_event.clear()
-            int_thread.join()
+            # int_thread.join()
             self.__post_processing()
         except MacroExtractionException as exc:
             raise OblivionCoreException(f"[-] Macro extraction failed: {exc}")  # handle
@@ -110,9 +116,8 @@ class OblivionCore:
         else:
             pass  # handle
         finally:
-            ending_time = time.time()
             self.__clean_sandbox()  # handle
-            print(f"[?] Analysis time: {around(ending_time - starting_time, decimals=2)}")
+            print(f"[?] Analysis time: {self.__toc(total=True)}")
             pass
 
     def __interaction_manager(self):
@@ -132,13 +137,13 @@ class OblivionCore:
             for macro_name, macro_code in macro_data.items():
                 foObj.write(f"{macro_name}\n{macro_code}\n\n")
 
-        print("[+] Macro successfully extracted")
+        print(f"[+] Macro successfully extracted in {self.__toc()}")
 
     def __macro_instrumentation(self):
         phase = MacroInstrumentation(self.original_macro_data_path, self.exclusion_path,
                                      self.instrumented_macro_data_path)
         phase.run()
-        print("[+] Macro successfully instrumented")
+        print(f"[+] Macro successfully instrumented in {self.__toc()}")
 
     def __file_extraction(self):
         log_path = os.path.join("OblivionResources", "logs", "sbx_out_err.log")
@@ -149,7 +154,7 @@ class OblivionCore:
                               self.config.Sandboxie_path, self.ext_info[self.current_extension],
                               self.args.no_clean_slate)
         phase.run()
-        print("[+] File successfully executed")
+        print(f"[+] File successfully executed in {self.__toc()}")
 
     def __post_processing(self):
         program = self.ext_info[self.current_extension]["program"]
@@ -157,13 +162,12 @@ class OblivionCore:
                                self.current_extension, self.config.PowerDecode_path, self.config.Sandboxie_path,
                                self.config.Sandbox_name, program, self.current_report_file)
         phase.run()
-        print("[+] Report successfully generated")
+        print(f"[+] Report successfully generated in {self.__toc()}")
 
     @staticmethod
     def __path_to_output(path):
         ext = path.split('.')[-1]
         modified_path = path.replace('.' + ext, f"_obl3_modified.{ext}")
-        # output_path = path.replace('.' + ext, f"_{ext}_output.txt")
         output_path = path + ".txt"
         report_path = path.replace('.' + ext, f"_{ext}_report.txt")
         return modified_path, output_path, report_path
@@ -177,3 +181,10 @@ class OblivionCore:
     def __clean_sandbox(self):
         EasyProcess([self.config.Sandboxie_path, "/terminate_all"]).call().wait()
         EasyProcess([self.config.Sandboxie_path, "delete_sandbox_silent"]).call().wait()
+
+    def __toc(self, total=False):
+        toc = time.time()
+        tic = self.last_phase_ended_at if not total else self.starting_time
+        time_amount = around(toc - tic, decimals=3)
+        self.last_phase_ended_at = toc
+        return time_amount
