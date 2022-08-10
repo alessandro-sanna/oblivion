@@ -1,2 +1,3 @@
 from .file_execution import FileExecution, FileExecutionException
 from .office_sandbox import OfficeSandbox
+from .interaction_manager import InteractionManager, InteractionManagerException

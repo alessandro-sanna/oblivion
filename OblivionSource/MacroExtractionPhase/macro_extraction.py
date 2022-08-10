@@ -1,7 +1,6 @@
 import oletools.olevba
 from oletools.olevba import VBA_Parser
 import json
-import os
 
 
 class MacroExtractionException(Exception):
@@ -9,7 +8,7 @@ class MacroExtractionException(Exception):
 
 
 class MacroExtraction:
-    def __init__(self, file_path, extensions, original_macro_data_path):
+    def __init__(self, file_path, extensions, original_macro_data_path=None):
         if file_path.split('.')[-1] in extensions:
             self.__office_file_path = file_path
         else:
@@ -46,8 +45,9 @@ class MacroExtraction:
             if not there_is_code:
                 raise MacroExtractionException(u"All macros are empty")
 
-            with open(self.__original_macro_data_path, "w") as fpJson:
-                json.dump(self.__macro_data, fpJson, indent=4)
+            if self.__original_macro_data_path is not None:
+                with open(self.__original_macro_data_path, "w") as fpJson:
+                    json.dump(self.__macro_data, fpJson, indent=4)
 
         else:
             vb_parser.close()

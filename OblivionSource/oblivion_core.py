@@ -1,8 +1,6 @@
 import os
 import json
 import time
-
-import numpy as np
 from numpy import around
 from types import SimpleNamespace
 import multiprocessing
@@ -12,9 +10,8 @@ import queue
 # Oblivion phases
 from OblivionSource.MacroExtractionPhase import MacroExtraction, MacroExtractionException
 from OblivionSource.MacroInstrumentationPhase import MacroInstrumentation, MacroInstrumentationException
-from OblivionSource.FileExecutionPhase import FileExecution, FileExecutionException
+from OblivionSource.FileExecutionPhase import FileExecution, FileExecutionException, InteractionManager
 from OblivionSource.PostProcessingPhase import PostProcessing, PostProcessingException
-from OblivionPlugins.InteractionManager import InteractionManager
 
 
 class OblivionCoreException(Exception):
@@ -49,9 +46,10 @@ class OblivionCore:
         self.instrumented_macro_data = os.path.join("OblivionResources", "files", "instrumented_macro.txt")
         self.instrumented_macro_data_path = os.path.join("OblivionResources", "data", "instrumented_macro_data.json")
 
-        self.exclusion_path = None
+        self.exclusion_lines = None
         self.starting_time = -1
         self.last_phase_ended_at = -1
+        self.current_attempts = 0
 
     def execute(self, single=False):
         if single:
@@ -96,30 +94,35 @@ class OblivionCore:
         print(f"[?] Current sample: {os.path.basename(self.current_original_file)}")
         self.starting_time = time.time()
         self.last_phase_ended_at = self.starting_time
-        try:
-            # Preliminary
-            self.__clean_sandbox()
-            # Phases
-            self.__macro_extraction()
-            self.__macro_instrumentation()
-            # Dynamic Analysis
-            self.__dynamic_analysis()
-            self.__post_processing()
-        except MacroExtractionException as exc:
-            raise OblivionCoreException(f"[-] Macro extraction failed: {exc}")  # handle
-        except MacroInstrumentationException as exc:
-            raise OblivionCoreException(f"[-] Macro instrumentation failed: {exc}")  # handle
-        except FileExecutionException as exc:
-            raise OblivionCoreException(f"[-] File execution failed: {exc}")  # handle
-            # repeating process must go here
-        except PostProcessingException as exc:
-            raise OblivionCoreException(f"[-] Report generation failed: {exc}")  # handle
-        else:
-            pass  # handle
-        finally:
-            self.__clean_sandbox()  # handle
-            print(f"[?] Analysis time: {self.__toc(total=True)}")
-            pass
+        self.current_attempts = 0
+        while True:
+            try:
+                # Preliminary
+                self.__clean_sandbox()
+                # Phases
+                self.__macro_extraction()
+                self.__macro_instrumentation()
+                # Dynamic Analysis calls file executions and needed daemons
+                self.__dynamic_analysis()
+                self.__post_processing()
+            except MacroExtractionException as exc:
+                raise OblivionCoreException(f"[-] Macro extraction failed: {exc}")  # handle
+            except MacroInstrumentationException as exc:
+                raise OblivionCoreException(f"[-] Macro instrumentation failed: {exc}")  # handle
+            except FileExecutionException as exc:
+                feasible = self.__can_it_run_again(exc)
+                if not feasible:
+                    raise OblivionCoreException(f"[-] File execution failed: {exc}")  # handle
+                else:
+                    self.__fix_instrumentation()
+                    continue
+            except PostProcessingException as exc:
+                raise OblivionCoreException(f"[-] Report generation failed: {exc}")  # handle
+            else:
+                break  # handle
+            finally:
+                self.__clean_sandbox()  # handle
+                print(f"[?] Analysis time: {self.__toc(total=True)}")
 
     def __interaction_manager(self):
         enable_event = threading.Event()
@@ -143,7 +146,7 @@ class OblivionCore:
         print(f"[+] Macro successfully extracted in {self.__toc()}")
 
     def __macro_instrumentation(self):
-        phase = MacroInstrumentation(self.original_macro_data_path, self.exclusion_path,
+        phase = MacroInstrumentation(self.original_macro_data_path, self.exclusion_lines,
                                      self.instrumented_macro_data_path)
         phase.run()
         print(f"[+] Macro successfully instrumented in {self.__toc()}")
@@ -208,3 +211,26 @@ class OblivionCore:
         time_amount = around(toc - tic, decimals=3)
         self.last_phase_ended_at = toc
         return time_amount
+
+    def __can_it_run_again(self, exc):
+        self.current_attempts += 1
+
+        if self.current_attempts >= self.args.max_retries:
+            return False
+
+        if "vba error" not in str(exc).lower():
+            return False
+
+        try:
+            with open(self.current_output_file, "r") as foOutput:
+                self.exclusion_lines = [line for line in foOutput.readlines()
+                                        if line.startswith("Exception")
+                                        and "=" in line]
+                return len(self.exclusion_lines) > 0
+                # If it starts with "Exception" it's an error, if it has no '='
+                # it was not caused by vhook therefore we cannot intervene
+        except FileNotFoundError:
+            return False
+
+    def __fix_instrumentation(self):
+        raise NotImplementedError("Instrumentation fix will be completed in the future")

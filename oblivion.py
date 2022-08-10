@@ -2,7 +2,6 @@ import argparse
 import sys
 import os
 from OblivionSource import OblivionCore
-from OblivionSource.PreProcessingPhase import PreProcessing
 
 
 class OblivionException(Exception):
@@ -27,14 +26,14 @@ class Oblivion:
                             help="path of the directory where Oblivion will save the report file")
         parser.add_argument("-t", "--time_limit", nargs='?', type=float, default=99999.0,
                             help="maximum time per single analysis")
-        parser.add_argument("-p", "--preprocessing", nargs='?', choices={"static", "dynamic"},
-                            help="if set, activate pre-processing mode")
         parser.add_argument("-mdb", "--use_mongo_db", action="store_true",
                             help="if set, save reports in a mongo database")
         parser.add_argument("-ncs", "--no_clean_slate", action="store_true",
                             help="if set, inject instrumentation in file as it is")
-        parser.add_argument("-im", "--use_interaction_manager", action="store_true",
-                            help="if set, run the interaction manager plug-in")
+        parser.add_argument("-nt", "--max_retries", nargs='?', default=0,
+                            help="if set, file can try to run again NT times after a VBA exception")
+        # parser.add_argument("-im", "--use_interaction_manager", action="store_true",
+        #                    help="if set, run the interaction manager plug-in")
 
         if len(sys.argv) == 1:
             print("No argument supplied\n")
@@ -68,10 +67,5 @@ if __name__ == '__main__':
     if normal_execution:
         core_obj = OblivionCore(oblivion_obj.args)
         core_obj.execute(single=oblivion_obj.is_file_run())
-
-    elif oblivion_obj.is_preprocessing_run():
-        prep_obj = PreProcessing(oblivion_obj.args, oblivion_obj.args.preprocessing.capitalize())
-        prep_obj.execute()
-
     else:
         raise OblivionException("Options not recognized, please use -h for usage.")

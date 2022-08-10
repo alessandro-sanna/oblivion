@@ -43,8 +43,6 @@ class InteractionManager:
             except IndexError:
                 time.sleep(0.5)
 
-        # self.log_fp.close()
-
     def __set_office(self):
         queue = psutil.process_iter()
         while self.enable_event.is_set():
@@ -90,7 +88,6 @@ class InteractionManager:
         if elem.class_name == "Button":
             self.__button_strategy(elem)
             return
-        # raise InteractionMgrException("I dont know this window type")
 
     def __button_strategy(self, elem):
         rect = self.current_app.window(handle=elem.handle).wrapper_object().client_rect()
@@ -146,18 +143,20 @@ class InteractionManager:
 
 
 if __name__ == '__main__':
-    import threading
-    target_file = r"C:\Users\diee\PycharmProjects\OblivionRef\OblivionTest\test_files\auto_both_test.docm"
-    ext_info = {
-    "main_class": "OpusApp",
-    "bosa_class": "bosa_sdm_msword",
-    "program": "word",
-    "main_module": "document",
-    "process_name": "WINWORD.EXE"
-    }
-    s = threading.Event()
-    s.set()
-    phase = InteractionManager(target_file, ext_info, s)
-    phase.run()
+    from threading import Event
+    from queue import Queue
 
-    pass
+    test_file = r"OblivionTest\test_files\auto_both_test.docm"
+    test_info = {
+        "main_class": "OpusApp",
+        "bosa_class": "bosa_sdm_msword",
+        "program": "word",
+        "main_module": "document",
+        "process_name": "WINWORD.EXE"
+    }
+    test_event = Event()
+    test_queue = Queue()
+
+    test_event.set()
+    phase = InteractionManager(test_file, test_info, test_event, test_queue)
+    phase.run()
