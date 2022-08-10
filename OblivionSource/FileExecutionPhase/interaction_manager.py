@@ -130,7 +130,10 @@ class InteractionManager:
         file_name = os.path.basename(self.target_file)
         scr_path = os.path.join(self.log_folder, f"{file_name}+{w_name}+{window.handle}.png")
         screen.save(scr_path)
-        self.__write_on_log(f"[x] Found window {w_name} with handle: {window.handle} and elements: {window.children()}")
+        self.__write_on_log(f"[x] Found window {w_name} with "
+                            f"handle: {window.handle}, "
+                            f"elements: {'; '.join([f'{w.class_name} - {w.name}' for w in window.children()])}, "
+                            f"screenshot: {scr_path}")
 
     def __write_on_log(self, log_message):
         with open(self.log_file, "a") as fpLog:

@@ -7,4 +7,4 @@ easyprocess~=1.1
 numpy~=1.23.1
 wmi~=1.5.1
 Pillow
-colorclass
+pymongo

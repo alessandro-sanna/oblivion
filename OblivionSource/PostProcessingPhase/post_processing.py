@@ -3,7 +3,7 @@
 # University of Cagliari, Department of Electrical and Electronic Engineering
 # V. 0.1 Beta - December 2017
 # This is an extended version of the VHook Tool released by ESET
-
+import hashlib
 from os.path import basename, join, exists, splitdrive
 from oletools.olevba import VBA_Parser
 from easyprocess import EasyProcess
@@ -416,14 +416,25 @@ class PostProcessing(object):
                         callers.remove(callers[-1])
 
     def __print_info(self):
-        fname = self.output_name.split("_")[0]
+        # fname = self.output_name.split("_")[0]
+        sha256 = self.__get_sha256(self.file_path)
         self.out.write("Date and Time: " +
                        str(time.strftime("%Y-%m-%d %H:%M"))+"\n")
-        self.out.write("Hash 256: " + fname + "\n")
+        self.out.write("Hash 256: " + sha256 + "\n")
 
         program_name = self.program.capitalize()
         file_type = "File Type: " + program_name + "\n\n"
         self.out.write(file_type)
+
+    @staticmethod
+    def __get_sha256(file_to_hash, buf_size=65536):
+        sha256 = hashlib.sha256()
+
+        with open(file_to_hash, "rb") as foObj:
+            while data := foObj.read(buf_size):
+                sha256.update(data)
+
+        return sha256.hexdigest()
 
     def __get_executables(self):
         """Check for executables"""
