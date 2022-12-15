@@ -51,10 +51,13 @@ class InteractionManager:
             except StopIteration:
                 queue = psutil.process_iter()
             else:
-                if self.program_info["process_name"] in proc.name().upper():
-                    self.current_process = proc
-                    self.current_app = pywinauto.Application().connect(process=int(proc.pid))
-                    break
+                try:
+                    if self.program_info["process_name"] in proc.name().upper():
+                        self.current_process = proc
+                        self.current_app = pywinauto.Application().connect(process=int(proc.pid))
+                        break
+                except pywinauto.application.ProcessNotFoundError:
+                    continue
 
     def __get_new_windows(self, exclusion_list):
         ppid = int(self.current_process.pid)
@@ -78,7 +81,12 @@ class InteractionManager:
             for element in elements:
                 if not self.__is_enabled(window):
                     break
-                self.__interact(element)
+                try:
+                    self.__interact(element)
+                except pywinauto.base_wrapper.ElementNotVisible:
+                    self.__write_on_log(f"{element.handle} not visible, skipping")
+            if self.__is_enabled(window):
+                self.__close_window(window)
 
     def __interact(self, elem):
         if elem.class_name == "Edit":
@@ -117,19 +125,28 @@ class InteractionManager:
 
     def __handle_error(self, message):
         self.__set_office()
-        self.current_process.terminate()
+        try:
+            self.current_process.terminate()
+        except psutil.NoSuchProcess:
+            pass
         self.exception_queue.put(InteractionManagerException(message))
 
     def __close_window(self, window):
         if self.__is_enabled(window):
-            self.current_app.window(handle=window.handle).close()
+            try:
+                self.current_app.window(handle=window.handle).close()
+            except pywinauto.timings.TimeoutError:
+                self.__handle_error(f"Window timed out!")
 
     def __log(self, window):
         screen = pyautogui.screenshot()
         w_name = window.name if window.name != "" else "unnamed"
         file_name = os.path.basename(self.target_file)
         scr_path = os.path.join(self.log_folder, f"{file_name}+{w_name}+{window.handle}.png")
-        screen.save(scr_path)
+        try:
+            screen.save(scr_path)
+        except OSError:
+            screen.save(os.path.join(self.log_folder, f"windows{int(time.time())}"))
         self.__write_on_log(f"[x] Found window {w_name} with "
                             f"handle: {window.handle}, "
                             f"elements: {'; '.join([f'{w.class_name} - {w.name}' for w in window.children()])}, "

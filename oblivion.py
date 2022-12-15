@@ -30,10 +30,12 @@ class Oblivion:
                             help="if set, save reports in a mongo database")
         parser.add_argument("-ncs", "--no_clean_slate", action="store_true",
                             help="if set, inject instrumentation in file as it is")
+        parser.add_argument("-dd", "--in_depth", action="store_true",
+                            help="if set, look recursively in subdirectories")
         parser.add_argument("-nt", "--max_retries", nargs='?', default=0,
                             help="if set, file can try to run again NT times after a VBA exception")
-        # parser.add_argument("-im", "--use_interaction_manager", action="store_true",
-        #                    help="if set, run the interaction manager plug-in")
+        parser.add_argument("-sf", "--start_from", nargs='?', type=int, default=0,
+                            help="skip first N samples in folder(s)")
 
         if len(sys.argv) == 1:
             print("No argument supplied\n")

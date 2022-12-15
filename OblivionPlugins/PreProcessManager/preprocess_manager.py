@@ -4,7 +4,7 @@ from os.path import join, dirname
 from pywinauto.findwindows import find_elements
 from easyprocess import EasyProcess
 from oletools import olevba
-# from oblivion.src.managers import OfficeManager, ConfigManager, UtilityManager
+
 import pywinauto
 import psutil
 import time
@@ -53,7 +53,10 @@ class PreProcessing:
             self.__dynamic_analysis()
 
     def __static_analysis(self):
-        for file_str in os.listdir(self.folder_path):
+        file_list = os.listdir(self.folder_path)
+        total = len(file_list)
+        corr_ind = 0
+        for index, file_str in enumerate(file_list):
             self.file_path = join(self.folder_path, file_str)
             if self.__is_office_file(self.file_path):
                 self.file_name = file_str
@@ -75,8 +78,10 @@ class PreProcessing:
                                 self.__check_errors_in_macro_name(macro_list)
                             if error is True:  # Errors in macro name
                                 self.__manage_corrupted()
+                                corr_ind += 1
                             else:
                                 self.__manage_correct(macro_list)
+            print(f"\r{index + 1}/{total}, {corr_ind} corrupted", end='')
 
     def __dynamic_analysis(self):
         self.__manage_folder_creation()
@@ -101,11 +106,11 @@ class PreProcessing:
                         if self.__is_opening_window():
                             self.__manage_opening_window()
                             break
-                        else: # file already opened but not executing
+                        else:  # file already opened but not executing
                             self.__clean_sandbox()
                             self.__move_file(self.file_path,
-                                join(self.not_executables_folder_path,
-                                     self.file_name))
+                                             join(self.not_executables_folder_path,
+                                                  self.file_name))
                             break
                     else:
                         win_list = self.__get_main_window()
@@ -203,7 +208,7 @@ class PreProcessing:
                                             "Executables")
         self.__create_dir(self.executables_folder_path)
         self.not_executables_folder_path = join(self.output_folder_path,
-                                               "No_Executables")
+                                                "No_Executables")
         self.__create_dir(self.not_executables_folder_path)
         self.no_execution_folder_path = join(self.output_folder_path,
                                              "No_Execution")
@@ -278,6 +283,7 @@ class PreProcessing:
             raise PreProcessingException(u"no output path detected in the "
                                          u"arguments")
     """
+
     def __check_errors_in_macro_name(self, macros_list):
         if False in map(self.__extension_error, macros_list):
             return True

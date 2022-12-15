@@ -29,6 +29,20 @@
     "program": "excel",
     "main_module": "workbook",
     "process_name": "EXCEL.EXE"
+  },
+  "docx": {
+    "main_class": "OpusApp",
+    "bosa_class": "bosa_sdm_msword",
+    "program": "word",
+    "main_module": "document",
+    "process_name": "WINWORD.EXE"
+  },
+  "xlsx": {
+    "main_class": "XLMAIN",
+    "bosa_class": "bosa_sdm_XL9",
+    "program": "excel",
+    "main_module": "workbook",
+    "process_name": "EXCEL.EXE"
   }
 
 }

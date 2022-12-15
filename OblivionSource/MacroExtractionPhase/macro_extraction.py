@@ -1,3 +1,5 @@
+import xml
+
 import oletools.olevba
 from oletools.olevba import VBA_Parser
 import json
@@ -22,9 +24,11 @@ class MacroExtraction:
 
     def __extract_macro(self):
         try:
-            vb_parser = VBA_Parser(self.__office_file_path)
+              vb_parser = VBA_Parser(self.__office_file_path)
         except oletools.olevba.FileOpenError:
             raise MacroExtractionException(f"File looks like a Office document but isn't")
+        except xml.etree.ElementTree.ParseError:
+            raise MacroExtractionException("Malformed file")
 
         there_is_code = False
         try:

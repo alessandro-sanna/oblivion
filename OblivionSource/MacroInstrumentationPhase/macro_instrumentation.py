@@ -64,6 +64,7 @@ class MacroInstrumentation:
             json.dump(self.__instrumented_macros, jsf, indent=4)
 
     def __instrument(self, macro):
+        self.output = list()
         self.__prepare_external_function_calls(macro.replace(" _\n", " "))
         macro_lines = [line.strip() for line in macro.splitlines()]
         self.lines = macro_lines

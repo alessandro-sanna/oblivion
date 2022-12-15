@@ -16,6 +16,7 @@ import sys
 import re
 import os
 import numpy as np
+import warnings
 
 
 class PostProcessingException(Exception):
@@ -54,10 +55,10 @@ class PostProcessing(object):
         self.__sandboxie_path = sandboxie_path
         self.__sandboxie_name = sandboxie_name
         self.__powerdecode_path = powerdecode_path
-        self.__temp_ps_path = join(os.getcwd(), "data", "temp_powershell.ps1")
+        self.__temp_ps_path = join(os.getcwd(), "OblivionResources", "data", "temp_powershell.ps1")
         self.__out_path = join(os.getcwd(), "data", "out.txt")
         self.__sand_out_path = self.__get_sandbox_path(self.__out_path)
-        self.__err_path = join(os.getcwd(), "data", "err.txt")
+        self.__err_path = join(os.getcwd(), "OblivionResources", "data", "err.txt")
         self.__sand_err_path = self.__get_sandbox_path(self.__err_path)
         self.__get_calls_from_macro()
         self.__parse_variables()
@@ -171,7 +172,7 @@ class PostProcessing(object):
                 else:
                     return ""
             else:
-                raise PostProcessingException("PowerDecode did not generate any output, report failed")# exit(-1)
+                warnings.warn("PowerDecode did not generate any output, report failed")# exit(-1)
         else:
             exit(-1)
 

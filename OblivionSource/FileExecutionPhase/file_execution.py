@@ -5,6 +5,7 @@ import time
 from itertools import product
 import subprocess
 from copy import deepcopy
+import warnings
 
 
 class FileExecutionException(Exception):
@@ -17,7 +18,7 @@ class FileExecution:
                  sandbox_name, sandbox_exe, ext_info, no_clean_slate_flag):
         self.auto_open, self.auto_close = self.__get_auto_exec(instrumented_code_path)
         if not self.auto_open and not self.auto_close:
-            raise FileExecutionException("Code cannot run itself.")
+            warnings.warn("Code cannot run itself.")
 
         self.running_file = running_file
         self.output_file = output_file
@@ -36,18 +37,28 @@ class FileExecution:
 
     def run(self):
         file_name = deepcopy(self.output_file_in_sandbox)
-
         command = self.__build_command()
-        self.__launch(command)
+
+        try:
+            subprocess.check_call(command)
+        except subprocess.CalledProcessError as exc:
+            self.__manage_crash(exc, exc.returncode)
+        else:
+            while not os.path.exists(self.log_file_in_sandbox):
+                time.sleep(1)
+            # shutil.copy2(file_name, self.output_file)
+        finally:
+            if os.path.exists(self.log_file_in_sandbox):
+                os.remove(self.log_file_in_sandbox)
+
+
+        """self.__launch(command)
 
         if not os.path.exists(file_name):
             raise FileExecutionException("File execution produced no output.")
         else:
             while not self.__is_file_available(file_name):
-                time.sleep(1)
-
-            shutil.copy2(file_name, self.output_file)
-
+                time.sleep(1)"""
 
     def __build_command(self):
         script_name = os.path.join("OblivionSource", "FileExecutionPhase", "office_sandbox.py")
@@ -57,8 +68,8 @@ class FileExecution:
                        ] + flags
 
         command = [self.sandbox_exe, f"/box:{self.sandbox_name}", "/wait",
-                   sys.executable.replace("python.exe", "pythonw.exe"),
-                   script_name] + script_args + [self.log_file]
+                   sys.executable.replace("python.exe", "pythonw.exe"),  # second arg is pythonw.exe
+                   script_name] + script_args + [self.log_file] + [os.path.abspath(os.getcwd())]
         
         return command
     
@@ -66,23 +77,19 @@ class FileExecution:
         try:
             subprocess.check_call(command)
         except subprocess.CalledProcessError as exc:
-            self.__print_crash(exc, exc.returncode)
+            self.__manage_crash(exc, exc.returncode)
 
-    def __print_crash(self, exc=None, return_code=0):
-        reason = f"File execution crashed, exit code = {return_code},"
+    def __manage_crash(self, exc, return_code=0):
+        reason = "Crash: "
         try:
             shutil.copy2(self.log_file_in_sandbox, self.log_file)
         except FileNotFoundError:
-            reason += " with no log"
+            reason += "No log found"
         else:
             with open(self.log_file, "r") as lf:
-                output = [x for x in lf.readlines() if x][-1]
-            reason += f": {output}." + f"Detailed log at {os.path.relpath(self.log_file)}"
+                reason += [x for x in lf.readlines() if x][-1]
         finally:
-            message = f"{reason}."
-            if exc is not None:
-                message += f" Caught exception {exc}"
-            raise FileExecutionException(message)
+            raise FileExecutionException(reason)
 
     @staticmethod
     def __get_auto_exec(instrumented_code_path) -> (bool, bool):
@@ -99,7 +106,7 @@ class FileExecution:
                 suffix = suffixes[index]
                 check_list = [x for x in keywords if x.endswith(suffix)]
                 for kw in check_list:
-                    if kw in code:
+                    if ' ' + kw in code:
                         flags[index] = True
                         break
         
