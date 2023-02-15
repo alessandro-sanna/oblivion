@@ -1,4 +1,6 @@
 import argparse
+import shutil
+import pathlib
 import sys
 from os.path import join, dirname
 from pywinauto.findwindows import find_elements
@@ -29,7 +31,8 @@ class PreProcessing:
         self.folder_path = args_namespace.folder_path
         self.output_folder_path = args_namespace.output_path
         self.execution_type = args_namespace.mode
-
+        self.copy_flag = args_namespace.copy
+        self.enumerate_flag = args_namespace.enumerate
         self.ext_info = ext_info
         self.interaction_path = ""
         self.corrupted_path = ""
@@ -90,7 +93,10 @@ class PreProcessing:
                      self.__is_office_file(join(self.folder_path, f)) and
                      '$' not in f]
         try:
-            for file_str in file_list:
+            total = len(file_list)
+            for i_file, file_str in enumerate(file_list):
+                print(f"\r{i_file}/{total}", end="")
+
                 self.file_name = file_str
                 self.file_path = join(self.folder_path, self.file_name)
                 self.__set_file_ext()
@@ -458,10 +464,24 @@ class PreProcessing:
         else:
             os.makedirs(dir_path)
 
-    @staticmethod
-    def __move_file(old_path, new_path):
+    def __move_file(self, old_path, new_path):
         try:
-            os.rename(old_path, new_path)
+            if self.enumerate_flag:
+                fp = os.path.join(os.path.dirname(new_path), "amount.txt")
+                pathlib.Path(fp).touch(exist_ok=True)
+                with open(fp, "r+") as frwCount:
+                    amount = frwCount.read()
+                    if amount:
+                        amount = int(amount)
+                    else:
+                        amount = 0
+                    frwCount.seek(0)
+                    frwCount.write(f"{amount + 1}")
+            else:
+                if self.copy_flag:
+                    shutil.copy2(old_path, new_path)
+                else:
+                    os.rename(old_path, new_path)
         except WindowsError:
             pass
 
@@ -523,6 +543,11 @@ class PreProcessing:
     def __is_office_file(self, file_name):
         return file_name.split('.')[-1].lower() in self.ext_info.keys()
 
+    def __path_to_sandbox(self, path):
+        old_root = os.path.join("C:\\", "Users", os.getenv("username"))
+        new_root = os.path.join("C:\\", "Sandbox", os.getenv("username"), self.sandbox_name, "user", "current")
+        sandbox_path = path.replace(old_root, new_root)
+        return sandbox_path
 
 class DataGet:
     def __init__(self, config_path, ext_info_path):
@@ -545,6 +570,12 @@ class DataGet:
                             choices={"Static", "Dynamic"},
                             help="choose pre-processing mode")
 
+        parser.add_argument("-c", "--copy", required=False,
+                            action="store_true",
+                            help="choose if copying or moving")
+        parser.add_argument("-e", "--enumerate", required=False,
+                            action="store_true",
+                            help="overwrite standard behaviour, instead just count the files")
         return parser.parse_args(sys.argv[1:])
 
     @staticmethod

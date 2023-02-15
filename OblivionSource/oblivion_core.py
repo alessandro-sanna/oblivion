@@ -122,6 +122,7 @@ class OblivionCore:
                     if os.path.exists(self.current_output_file):
                         shutil.move(self.current_output_file, self.current_output_file + ".old")
                     shutil.copy2(self.current_sandbox_output, self.current_output_file)
+                    shutil.copy2(self.current_output_file, os.path.dirname(self.current_report_file))
                 else:
                     pathlib.Path(self.current_output_file).touch(exist_ok=True)
 

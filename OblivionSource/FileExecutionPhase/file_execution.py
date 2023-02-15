@@ -18,7 +18,7 @@ class FileExecution:
                  sandbox_name, sandbox_exe, ext_info, no_clean_slate_flag):
         self.auto_open, self.auto_close = self.__get_auto_exec(instrumented_code_path)
         if not self.auto_open and not self.auto_close:
-            warnings.warn("Code cannot run itself.")
+            raise FileExecutionException("Code cannot run itself.")
 
         self.running_file = running_file
         self.output_file = output_file
