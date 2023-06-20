@@ -54,6 +54,7 @@ Then, add keys to Windows Registry:
 This program requires an installation of Microsoft Office (https://www.office.com/) and Sandboxie (https://sandboxie-plus.com/). Follow the respective vendors' instructions. We also strongly advise running this framework inside a Virtual Machine if you are dealing with malware.
 
 In Word and Excel: go to Trust Center and allow Programmatic Access to the VBA Module; tick "Enable all Macros".
+
 In Sandboxie: disable all alerts.
 
 Finally, set the paths required in $OBLIVIONFOLDER/OblivionResources/config/configuration.json
