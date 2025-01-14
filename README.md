@@ -1,6 +1,7 @@
 # Oblivion
 Oblivion is a python3-based framework for automatically analysing Office files containing VBA macros. It can only be run on Windows. See "Installation" for further detail.
-
+This is the framework used in the publication "Oblivion: an open-source system for large-scale analysis of macro-based office malware" (doi: 10.1007/s11416-024-00531-3) published in the 
+Journal of Computer Virology and Hacking Techniques.
 ## Usage
 
 Oblivion is designed for the analysis of multiple files. To analyze multiple files at once, run the following:
